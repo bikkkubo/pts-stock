@@ -1,0 +1,85 @@
+# Project Task List: Stock Market Analysis Reporter
+
+## 1. Setup & Dependencies:
+- [x] Create a project directory.
+- [ ] Initialize a virtual environment (e.g., `python -m venv venv`).
+- [x] Create a `requirements.txt` file listing necessary libraries:
+    - `requests`
+    - `beautifulsoup4`
+    - `lxml`
+    - `google-generativeai`
+    - `google-api-python-client`
+    - `google-auth-httplib2`
+    - `google-auth-oauthlib`
+    - `pandas` (Optional, confirm if needed)
+    - `python-dotenv`
+- [ ] Install dependencies (`pip install -r requirements.txt`).
+- [x] Create a `.env` file for storing API keys (Gemini) and Google Service Account credential path. Add `.env` to `.gitignore`.
+- [ ] Create a placeholder for the Google Service Account `credentials.json` (User needs to provide this).
+- [x] Set up basic logging configuration using the `logging` module (in `main.py`).
+- [x] Create `.gitignore`.
+
+## 2. Web Scraping Module (`scraper.py`):
+- [x] Create `scraper.py`.
+- [ ] Create a function `scrape_yahoo_finance(url: str) -> list[dict]` (or pandas DataFrame).
+- [ ] Implement logic using `requests` and `BeautifulSoup` to fetch and parse the HTML from the provided Yahoo Finance ranking URLs.
+- [ ] Extract Rank, Stock Code, Stock Name, Price Change (%), and Stop High/Low status for the top 10 stocks from each page.
+- [ ] Handle potential errors during HTTP requests and HTML parsing.
+- [x] Return the extracted data in a structured format (list of dictionaries or DataFrame) - function signature defined.
+- [x] Include basic error handling structure.
+- [x] Add type hints.
+
+## 3. Gemini Analysis Module (`analyzer.py`):
+- [x] Create `analyzer.py`.
+- [x] Create a function `analyze_with_gemini(stock_name: str, stock_code: str, price_change: float) -> tuple[str, list[str]]`.
+- [x] Load the Gemini API key from the environment variables (placeholder).
+- [x] Initialize the `google.generativeai` client with the `gemini-pro` model (placeholder).
+- [x] Construct a prompt for the Gemini API.
+- [x] Implement the API call to Gemini (placeholder).
+- [x] Parse the response to extract the analysis text and any source URLs found (basic placeholder).
+- [x] Handle potential API errors (basic structure).
+- [x] Return the analysis text and a list of source URLs.
+- [x] Add type hints.
+
+## 4. Google Docs Reporting Module (`reporter.py`):
+- [x] Create `reporter.py`.
+- [x] Create a function `create_google_doc(report_data: list[dict], stop_limit_stocks: list[dict], report_date_str: str) -> str`.
+- [ ] Load Google Service Account credentials using `google.oauth2.service_account` and the path from `.env` (placeholder).
+- [ ] Build the Google Docs API service client (placeholder).
+- [ ] Define the structure of the Google Doc body based on the "Output Format" section in the rules (placeholder).
+- [ ] Implement logic to create a new Google Document (placeholder).
+- [ ] Handle Google Docs API errors (basic structure).
+- [x] Return the ID or URL of the created Google Document (placeholder return).
+- [x] Add type hints.
+
+## 5. Main Script (`main.py`):
+- [x] Create `main.py`.
+- [ ] Import functions from other modules.
+- [x] Define constants (URLs, market types).
+- [x] Get the current date for the report title and content.
+- [x] Define the list of URLs to scrape.
+- [ ] **Scraping Phase:**
+    - [ ] Loop through the URLs, calling `scrape_yahoo_finance` for each.
+    - [ ] Collect all scraped stock data. Handle scraping errors.
+- [ ] **Analysis Phase:**
+    - [ ] Initialize lists for results and stop-limit stocks.
+    - [ ] Iterate through the scraped stock data.
+    - [ ] For each stock, call `analyze_with_gemini`. Handle analysis errors.
+    - [ ] Identify and collect stocks marked as Stop High/Low.
+- [ ] **Reporting Phase:**
+    - [ ] Call `create_google_doc` with the combined data, stop-limit stocks, and report date.
+    - [ ] Log the success message/document URL or errors.
+- [x] Implement overall script error handling and logging (basic setup).
+- [ ] Add command-line argument parsing (optional).
+
+## 6. Configuration (`config.py` or `.env`):
+- [ ] Store non-sensitive configurations if needed.
+- [x] Ensure `.env` handles sensitive keys (Gemini API Key, Google Credentials Path) - `.env` created.
+
+## 7. Testing & Refinement:
+- [ ] Test each module individually.
+- [ ] Test the end-to-end script execution.
+- [ ] Verify the output Google Document format.
+- [ ] Test error handling scenarios.
+- [ ] Refine prompts for Gemini if needed.
+- [ ] Consider efficiency for the 8:45 AM JST deadline. 

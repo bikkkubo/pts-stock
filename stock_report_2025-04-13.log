@@ -1,0 +1,38 @@
+2025-04-13 01:09:52,541 - INFO - [main.py:57] - Logging initialized. Log file: stock_report_2025-04-13.log
+2025-04-13 01:09:52,541 - INFO - [main.py:69] - === Starting Stock Market Analysis Report Generation for 2025-04-13 ===
+2025-04-13 01:09:52,541 - INFO - [main.py:70] - Using API delay: 1.0s
+2025-04-13 01:09:52,541 - INFO - [main.py:74] - Targeting root Google Drive folder.
+2025-04-13 01:09:52,541 - INFO - [main.py:75] - Using Google Credentials Path: credentials.json
+2025-04-13 01:09:52,541 - INFO - [main.py:90] - --- Phase 1: Scraping and Analyzing Stocks ---
+2025-04-13 01:09:52,542 - INFO - [main.py:92] - Processing category: regular_up - URL: https://kabutan.jp/warning/value_increase
+2025-04-13 01:09:53,547 - INFO - [scraper.py:127] - Attempting to scrape Kabutan URL: https://kabutan.jp/warning/value_increase
+2025-04-13 01:09:55,008 - WARNING - [scraper.py:21] - Could not find ranking table 'table.stock_kabuka0' on https://kabutan.jp/warning/value_increase
+2025-04-13 01:09:55,009 - WARNING - [scraper.py:143] - No valid stock data extracted from https://kabutan.jp/warning/value_increase. Parser function returned empty.
+2025-04-13 01:09:55,009 - WARNING - [main.py:96] - No stocks scraped from https://kabutan.jp/warning/value_increase. Skipping analysis.
+2025-04-13 01:09:55,009 - INFO - [main.py:92] - Processing category: regular_down - URL: https://kabutan.jp/warning/value_decrease
+2025-04-13 01:09:56,013 - INFO - [scraper.py:127] - Attempting to scrape Kabutan URL: https://kabutan.jp/warning/value_decrease
+2025-04-13 01:09:56,236 - WARNING - [scraper.py:21] - Could not find ranking table 'table.stock_kabuka0' on https://kabutan.jp/warning/value_decrease
+2025-04-13 01:09:56,236 - WARNING - [scraper.py:143] - No valid stock data extracted from https://kabutan.jp/warning/value_decrease. Parser function returned empty.
+2025-04-13 01:09:56,236 - WARNING - [main.py:96] - No stocks scraped from https://kabutan.jp/warning/value_decrease. Skipping analysis.
+2025-04-13 01:09:56,236 - INFO - [main.py:92] - Processing category: pts_up - URL: https://kabutan.jp/warning/pts_night_price_increase
+2025-04-13 01:09:57,242 - INFO - [scraper.py:127] - Attempting to scrape Kabutan URL: https://kabutan.jp/warning/pts_night_price_increase
+2025-04-13 01:09:57,435 - WARNING - [scraper.py:21] - Could not find ranking table 'table.stock_kabuka0' on https://kabutan.jp/warning/pts_night_price_increase
+2025-04-13 01:09:57,435 - WARNING - [scraper.py:143] - No valid stock data extracted from https://kabutan.jp/warning/pts_night_price_increase. Parser function returned empty.
+2025-04-13 01:09:57,436 - WARNING - [main.py:96] - No stocks scraped from https://kabutan.jp/warning/pts_night_price_increase. Skipping analysis.
+2025-04-13 01:09:57,436 - INFO - [main.py:92] - Processing category: pts_down - URL: https://kabutan.jp/warning/pts_night_price_decrease
+2025-04-13 01:09:58,441 - INFO - [scraper.py:127] - Attempting to scrape Kabutan URL: https://kabutan.jp/warning/pts_night_price_decrease
+2025-04-13 01:09:59,242 - WARNING - [scraper.py:21] - Could not find ranking table 'table.stock_kabuka0' on https://kabutan.jp/warning/pts_night_price_decrease
+2025-04-13 01:09:59,242 - WARNING - [scraper.py:143] - No valid stock data extracted from https://kabutan.jp/warning/pts_night_price_decrease. Parser function returned empty.
+2025-04-13 01:09:59,242 - WARNING - [main.py:96] - No stocks scraped from https://kabutan.jp/warning/pts_night_price_decrease. Skipping analysis.
+2025-04-13 01:09:59,242 - INFO - [main.py:127] - --- Completed Scraping and Analysis Phase ---
+2025-04-13 01:09:59,242 - INFO - [main.py:128] - Total stocks analyzed: 0
+2025-04-13 01:09:59,242 - INFO - [main.py:129] - Total stop-high/low stocks found: 0
+2025-04-13 01:09:59,242 - INFO - [main.py:132] - --- Phase 2: Generating Google Docs Report ---
+2025-04-13 01:09:59,242 - INFO - [reporter.py:122] - Attempting to create Google Docs report...
+2025-04-13 01:09:59,245 - INFO - [__init__.py:49] - file_cache is only supported with oauth2client<4.0.0
+2025-04-13 01:09:59,246 - INFO - [__init__.py:49] - file_cache is only supported with oauth2client<4.0.0
+2025-04-13 01:10:00,916 - INFO - [reporter.py:160] - Created Google Doc ID: 1CaqYF_Wnxbeqnox5_ykTscm0xPkg5Ixa28H5NYxSUNU in root Drive
+2025-04-13 01:10:01,308 - INFO - [reporter.py:173] - Document content updated for Doc ID: 1CaqYF_Wnxbeqnox5_ykTscm0xPkg5Ixa28H5NYxSUNU
+2025-04-13 01:10:01,309 - INFO - [main.py:156] - Successfully created Google Docs report: https://docs.google.com/document/d/1CaqYF_Wnxbeqnox5_ykTscm0xPkg5Ixa28H5NYxSUNU/edit
+2025-04-13 01:10:01,309 - INFO - [main.py:165] - === Stock Market Analysis Report Generation Finished ==
+2025-04-13 01:10:01,309 - INFO - [main.py:166] - Total execution time: 8.77 seconds
