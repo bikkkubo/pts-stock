@@ -13,8 +13,8 @@ function main() {
     
     Logger.log('Processing data for date: ' + dateStr);
     
-    // Fetch PTS data (top 10 gainers and losers)
-    var ptsData = fetchPts(dateStr);
+    // Fetch PTS data using safe wrapper with 403 error handling
+    var ptsData = safeFetchPts(dateStr);
     if (!ptsData || ptsData.length === 0) {
       throw new Error('No PTS data retrieved for ' + dateStr);
     }

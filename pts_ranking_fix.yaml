@@ -1,0 +1,46 @@
+project: pts-stock
+generated_at: '2025-06-15 17:23:28'
+objective: Fix ranking mismatch by scraping Kabutan night PTS ranking pages with proper
+  endpoint.
+methods:
+  A_direct_html:
+    description: Parse night gainers/decliners HTML with cheerio in GAS.
+    urls:
+    - https://kabutan.jp/warning/pts_night_price_increase
+    - https://kabutan.jp/warning/pts_night_price_decrease
+    code_fetchNightPts: "function fetchNightPts(type){      // type = 'increase' |\
+      \ 'decrease'\n  const url = `https://kabutan.jp/warning/pts_night_price_${type}`;\n\
+      \  const options = {\n    headers: {'User-Agent':'Mozilla/5.0'},\n    muteHttpExceptions:\
+      \ true\n  };\n  const html = UrlFetchApp.fetch(url, options)\n             \
+      \              .getContentText('utf-8');\n  const $ = Cheerio.load(html);  \
+      \  // cheerio packaged via clasp\n  var rows = [];\n  $('table.stock_table tbody\
+      \ tr').each(function(){\n    const tds  = $(this).find('td');\n    const code\
+      \ = tds.eq(0).text().trim();\n    const name = tds.eq(1).text().trim();\n  \
+      \  const pts  = parseFloat(tds.eq(4).text().replace(/,/g,''));\n    const prev\
+      \ = parseFloat(tds.eq(5).text().replace(/,/g,''));\n    const rate = parseFloat(tds.eq(6).text()\n\
+      \                               .replace(/[+%]/g,''))/100;\n    rows.push({code:code,\n\
+      \               name:name,\n               ptsPrice:pts,\n               prevClose:prev,\n\
+      \               changePct:rate});\n  });\n  return rows;\n}"
+    code_fetchPts: "// Replace existing fetchPts()\nfunction fetchPts(dateStr){\n\
+      \  const gainers   = fetchNightPts('increase');\n  const decliners = fetchNightPts('decrease');\n\
+      \  return gainers.concat(decliners);\n}"
+    retry_wrapper: "function safeFetchPts(){\n  try {\n    return fetchPts();\n  }\
+      \ catch(e){\n    if(String(e).indexOf('403') >= 0){\n      Logger.log('Night\
+      \ PTS blocked, fallback to QUICK');\n      return fetchPtsQuick();      // implement\
+      \ JSON API fallback\n    }\n    throw e;\n  }\n}"
+  B_quick_api: Use QUICK/JNX paid API e.g. /v1/pts/ranking?type=gainers to retrieve
+    JSON.
+  C_cloud_run_headless: Create Cloud Run microservice running Puppeteer+Stealth to
+    return HTML to GAS.
+  D_ocr:
+    flow:
+    - Screenshot page (pageres or chromium).
+    - Send to Vision API TEXT_DETECTION.
+    - Parse text lines into structured rows.
+    note: Lowest priority due to 80-85% accuracy and heavy post-processing.
+deployment_steps:
+- npm install cheerio, bundle with clasp or gas-bundler.
+- Add User-Agent header to UrlFetchApp to mitigate 403.
+- Replace fetchPts and add safeFetchPts wrapper.
+- Manual test run, verify ranking alignment with Kabutan UI.
+- If frequent 403, enable QUICK API or Cloud Run fallback.
