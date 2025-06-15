@@ -1,0 +1,76 @@
+project: pts-stock
+purpose: Enhance AI summaries with concrete numbers, future outlook, and industry
+  rationale
+generated_at: '2025-06-15 15:53:11'
+current_logic:
+  data_sources:
+  - Kabutan headlines (3)
+  - Yahoo Finance headline (1)
+  summary_flow: If no articles -> template; else 1-sentence per cluster then reduce
+    to 3 sentences (no metrics)
+  output_columns:
+  - A:Name
+  - B:Code
+  - C:Open
+  - D:Close
+  - E:Change
+  - F:Summary
+  - G:URLs
+  limitations:
+  - No article bodies fetched, little numeric data
+  - No future outlook sentence
+  - Industry context generic
+  - Duplicates processed, limited sources
+new_logic:
+  data_sources:
+  - Kabutan article bodies with pagination
+  - TDnet RSS releases (IR)
+  - EDINET financial metrics
+  - Optional QUICK consensus
+  - Existing Yahoo Finance
+  processing:
+    duplicate_filter: URL hash + title distance + body vector similarity
+    fact_extraction: Regex extract sales, profit, YoY %
+    map_reduce_rag:
+    - 'Map: structure each article into JSON {title,kpi,driver,outlook}'
+    - 'Aggregate: merge KPIs, average values'
+    - 'Narrative: 3 sentences: fact w/number, future outlook, industry rationale;
+      append Sources URLs'
+    prompt_rules:
+    - Must quote at least one numeric KPI
+    - 3 sentences ≤400 chars
+    - 'End with ''Sources: URL1 URL2 URL3'''
+  output_columns:
+  - A:Name
+  - B:Code
+  - C:Open
+  - D:Close
+  - E:Change
+  - F:Summary
+  - G:MetricsCSV
+  - H:URLs
+code_changes:
+  fetchers.gs:
+  - Extend Kabutan parser for full text & pagination
+  - Add getTdnetReleases and getEdinetMetrics
+  - Remove generic company IR URL generation
+  nlp.gs:
+  - Implement extractFacts() for KPI regex
+  - Rewrite summarizeClusters() to 3-stage Map–Reduce–Narrative with new prompt
+  - Retry logic if format incorrect
+  writer.gs:
+  - Write MetricsCSV to column G, URLs to column H
+  main_flow:
+  - Deduplicate symbols using a Set
+  - Warn when sources <2
+  tests:
+  - fact_extraction.test.gs
+  - summary_style.test.gs
+  readme:
+  - Add key setup & failure FAQ
+deployment_steps:
+- Set Nikkei API, TDnet RSS keys in ScriptProperties
+- Modify fetchers.gs, then nlp.gs; test with single symbol
+- Add new columns to sheet
+- Pause trigger, run beta for 3 days, review output
+- Resume production trigger

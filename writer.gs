@@ -22,7 +22,7 @@ function updateSheet(rows) {
     // Clear existing data (except headers)
     var lastRow = sheet.getLastRow();
     if (lastRow > 1) {
-      sheet.getRange(2, 1, lastRow - 1, 8).clear();
+      sheet.getRange(2, 1, lastRow - 1, 9).clear();
     }
     
     // Set headers if not present
@@ -30,15 +30,15 @@ function updateSheet(rows) {
     
     // Add timestamp to data
     var timestamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
-    var timestampRow = ['レポート生成日時: ' + timestamp, '', '', '', '', '', '', ''];
+    var timestampRow = ['レポート生成日時: ' + timestamp, '', '', '', '', '', '', '', ''];
     
     // Write timestamp row
-    sheet.getRange(2, 1, 1, 8).setValues([timestampRow]);
+    sheet.getRange(2, 1, 1, 9).setValues([timestampRow]);
     
     // Write data rows starting from row 3
     if (rows.length > 0) {
       var startRow = 3;
-      var range = sheet.getRange(startRow, 1, rows.length, 8);
+      var range = sheet.getRange(startRow, 1, rows.length, 9);
       range.setValues(rows);
       
       // Format the data
@@ -116,7 +116,8 @@ function setupHeaders(sheet) {
     '差額',          // E: Price difference
     '騰落率(%)',     // F: Percentage change
     'AI要約',        // G: AI-generated summary
-    '情報源'         // H: Source URLs
+    'メトリクス',    // H: MetricsCSV (NEW)
+    '情報源'         // I: Source URLs
   ];
   
   var headerRange = sheet.getRange(1, 1, 1, headers.length);
@@ -137,11 +138,11 @@ function setupHeaders(sheet) {
  */
 function formatDataRange(sheet, startRow, numRows) {
   try {
-    var dataRange = sheet.getRange(startRow, 1, numRows, 7);
+    var dataRange = sheet.getRange(startRow, 1, numRows, 9);
     
     // Set alternating row colors
     for (var i = 0; i < numRows; i++) {
-      var rowRange = sheet.getRange(startRow + i, 1, 1, 8);
+      var rowRange = sheet.getRange(startRow + i, 1, 1, 9);
       if (i % 2 === 0) {
         rowRange.setBackground('#f8f9fa');
       } else {
@@ -177,21 +178,29 @@ function formatDataRange(sheet, startRow, numRows) {
       }
     }
     
-    // Column F (Summary): Wrap text
-    sheet.getRange(startRow, 6, numRows, 1).setWrap(true);
+    // Column G (Summary): Wrap text
+    sheet.getRange(startRow, 7, numRows, 1).setWrap(true);
     
-    // Column G (Sources): Wrap text, smaller font
-    var sourcesRange = sheet.getRange(startRow, 7, numRows, 1);
+    // Column H (Metrics): Wrap text, smaller font
+    var metricsRange = sheet.getRange(startRow, 8, numRows, 1);
+    metricsRange.setWrap(true);
+    metricsRange.setFontSize(9);
+    metricsRange.setHorizontalAlignment('left');
+    
+    // Column I (Sources): Wrap text, smaller font
+    var sourcesRange = sheet.getRange(startRow, 9, numRows, 1);
     sourcesRange.setWrap(true);
     sourcesRange.setFontSize(8);
     
     // Auto-resize columns
-    sheet.autoResizeColumns(1, 7);
+    sheet.autoResizeColumns(1, 9);
     
     // Set minimum widths for readability
     sheet.setColumnWidth(1, 80);  // Code
-    sheet.setColumnWidth(6, 300); // Summary
-    sheet.setColumnWidth(7, 200); // Sources
+    sheet.setColumnWidth(2, 120); // Name
+    sheet.setColumnWidth(7, 350); // Summary
+    sheet.setColumnWidth(8, 200); // Metrics
+    sheet.setColumnWidth(9, 150); // Sources
     
   } catch (error) {
     Logger.log('Error in formatDataRange(): ' + error.toString());

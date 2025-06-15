@@ -51,6 +51,7 @@ function main() {
       
       var summary = '';
       var sources = [];
+      var metrics = '';
       
       if (newsArticles && newsArticles.length > 0) {
         // Check if we have meaningful news articles (not just generic placeholders)
@@ -66,25 +67,28 @@ function main() {
         }
         
         if (hasMeaningfulNews) {
-          // Try OpenAI API first
+          // Try enhanced OpenAI API with KPI extraction
           try {
             var clusters = clusterArticles(newsArticles);
             var summaryResult = summarizeClusters(clusters);
             if (summaryResult && summaryResult.summary && summaryResult.summary.indexOf('エラー') < 0) {
               summary = summaryResult.summary;
               sources = summaryResult.sources || [];
-              Logger.log('Generated OpenAI summary for ' + symbol.code + ': ' + summary.substring(0, 50) + '...');
+              metrics = summaryResult.metrics || '';
+              Logger.log('Generated enhanced summary for ' + symbol.code + ': ' + summary.substring(0, 50) + '... [Metrics: ' + metrics + ']');
             } else {
               throw new Error('OpenAI API returned invalid summary');
             }
           } catch (openaiError) {
-            Logger.log('OpenAI API failed for ' + symbol.code + ', using fallback: ' + openaiError.toString());
+            Logger.log('Enhanced OpenAI API failed for ' + symbol.code + ', using fallback: ' + openaiError.toString());
             summary = generateEnhancedSummary(symbol, newsArticles);
+            metrics = ''; // No metrics available in fallback
             Logger.log('Generated fallback summary for ' + symbol.code + ': ' + summary.substring(0, 50) + '...');
           }
         } else {
           // No meaningful news found - generate analysis based on price movement
           summary = generateEnhancedSummary(symbol, []);
+          metrics = ''; // No metrics for price-only analysis
           Logger.log('Generated no-news summary for ' + symbol.code + ': ' + summary.substring(0, 50) + '...');
         }
         
@@ -107,7 +111,7 @@ function main() {
         sources.push('https://kabutan.jp/warning/pts_night_price_increase');
       }
       
-      // Prepare row data: A:H columns
+      // Prepare row data: A:H columns (updated with metrics)
       var row = [
         symbol.code,           // A: Symbol code
         symbol.name || '',     // B: Stock name
@@ -116,14 +120,15 @@ function main() {
         symbol.diff,           // E: Price difference
         symbol.diffPercent,    // F: Percentage change
         summary,               // G: AI-generated summary
-        sources.join('\n')     // H: Source URLs
+        metrics,               // H: MetricsCSV (NEW: KPI data)
+        sources.join('\n')     // I: Source URLs (moved to column I)
       ];
       
       allRows.push(row);
       
       } catch (symbolError) {
         Logger.log('Error processing symbol ' + symbol.code + ': ' + symbolError.toString());
-        // Add row with error information
+        // Add row with error information (updated for 9 columns)
         var errorRow = [
           symbol.code,
           symbol.name || '',
@@ -132,6 +137,7 @@ function main() {
           symbol.diff,
           symbol.diffPercent,
           '処理エラー: ' + symbolError.toString(),
+          '', // Empty metrics column
           'https://kabutan.jp/stock/?code=' + symbol.code
         ];
         allRows.push(errorRow);
