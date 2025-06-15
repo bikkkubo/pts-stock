@@ -1,16 +1,16 @@
-# Environment variables
+# Logs
+*.log
+
+# API Keys and Secrets  
 .env
+.clasp.json
 
-# Google Cloud credentials
-credentials.json
+# OS generated files
+.DS_Store
 
-# Python virtual environment
-venv/
-
-# Python cache
-__pycache__/
-*.py[cod]
-
-# IDE specific files
+# IDE files
+.vscode/
 .idea/
-.vscode/ 
+
+# Temporary files
+*.tmp
