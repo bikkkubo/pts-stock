@@ -7,6 +7,9 @@ function testPtsRankingAlignment() {
   try {
     Logger.log('=== PTS RANKING ALIGNMENT TEST ===');
     
+    // Expected ranking from user: 7603マックハウス, 3726フォーシーズ, 212AＦＥＡＳＹ, 4075ブレインズ
+    var expectedTop4 = ['7603', '3726', '212A', '4075'];
+    
     // Test gainers with mode=1
     Logger.log('Testing gainers ranking (mode=1)...');
     var gainers = fetchKabutanPtsGainers();
@@ -29,8 +32,25 @@ function testPtsRankingAlignment() {
         Logger.log('⚠️ GAINERS RANKING - Order may not be properly sorted');
       }
       
-      // Log top 3 for verification
-      for (var i = 0; i < Math.min(3, gainers.length); i++) {
+      // Check if top 4 matches expected ranking
+      var matchesExpected = true;
+      for (var i = 0; i < Math.min(4, gainers.length); i++) {
+        if (gainers[i].code !== expectedTop4[i]) {
+          matchesExpected = false;
+          break;
+        }
+      }
+      
+      if (matchesExpected) {
+        Logger.log('✅ EXPECTED RANKING - Matches user-provided ranking');
+      } else {
+        Logger.log('⚠️ EXPECTED RANKING - Does not match expected order');
+        Logger.log('Expected: ' + expectedTop4.join(', '));
+        Logger.log('Actual: ' + gainers.slice(0, 4).map(function(s) { return s.code; }).join(', '));
+      }
+      
+      // Log top 4 for verification
+      for (var i = 0; i < Math.min(4, gainers.length); i++) {
         var stock = gainers[i];
         Logger.log('  #' + (i+1) + ': ' + stock.code + ' (' + stock.name + ') +' + stock.diffPercent + '%');
       }
