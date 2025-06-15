@@ -615,6 +615,73 @@ function fetchEnhancedNikkeiNews(code) {
 }
 
 /**
+ * Get company overview from Kabutan stock page
+ * @param {string} code - Stock symbol code
+ * @return {string} Company overview text
+ */
+function getCompanyOverview(code) {
+  try {
+    var url = 'https://kabutan.jp/stock/?code=' + code;
+    
+    var response = UrlFetchApp.fetch(url, {
+      'method': 'GET',
+      'headers': {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      },
+      'muteHttpExceptions': true
+    });
+    
+    if (response.getResponseCode() !== 200) {
+      Logger.log('Failed to fetch company overview for ' + code + ': HTTP ' + response.getResponseCode());
+      return '';
+    }
+    
+    var html = response.getContentText();
+    
+    // Extract overview using regex pattern from YAML specification
+    var overviewPattern = /<th[^>]*>概要<\/th>[\s\S]*?<td[^>]*>(.*?)<\/td>/i;
+    var match = overviewPattern.exec(html);
+    
+    if (match && match[1]) {
+      var overview = match[1]
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+        .replace(/&amp;/g, '&')  // Replace &amp; with &
+        .replace(/&lt;/g, '<')   // Replace &lt; with <
+        .replace(/&gt;/g, '>')   // Replace &gt; with >
+        .trim();
+      
+      Logger.log('Extracted overview for ' + code + ': ' + overview.substring(0, 100) + '...');
+      return overview;
+    }
+    
+    // Fallback: try to extract from 特色 section if 概要 not found
+    var tokusyokuPattern = /<th[^>]*>特色<\/th>[\s\S]*?<td[^>]*>(.*?)<\/td>/i;
+    var tokusyokuMatch = tokusyokuPattern.exec(html);
+    
+    if (tokusyokuMatch && tokusyokuMatch[1]) {
+      var tokusyoku = tokusyokuMatch[1]
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .trim();
+      
+      Logger.log('Extracted tokusyoku for ' + code + ': ' + tokusyoku.substring(0, 100) + '...');
+      return tokusyoku;
+    }
+    
+    Logger.log('No overview or tokusyoku found for ' + code);
+    return '';
+    
+  } catch (error) {
+    Logger.log('Error fetching company overview for ' + code + ': ' + error.toString());
+    return '';
+  }
+}
+
+/**
  * Get company names for better search
  * @param {string} code - Stock symbol
  * @return {Array} Array of company names

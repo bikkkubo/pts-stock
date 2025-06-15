@@ -127,7 +127,88 @@ function clusterArticles(articles) {
 }
 
 /**
- * Generate enhanced summary using 3-stage Map-Reduce-Narrative approach with KPIs
+ * Generate enhanced summary with company overview integration
+ * @param {Array} clusters - Array of article clusters
+ * @param {string} companyOverview - Company overview text
+ * @param {Object} symbol - Symbol object with code and name
+ * @return {Object} Summary object with narrative, metrics CSV, and sources
+ */
+function summarizeClustersWithOverview(clusters, companyOverview, symbol) {
+  try {
+    if (!clusters || clusters.length === 0) {
+      return { summary: '', sources: [], metrics: '' };
+    }
+    
+    var openAiKey = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');
+    if (!openAiKey || !openAiKey.startsWith('sk-')) {
+      console.error('Invalid or missing OPENAI_API_KEY. Expected format: sk-...');
+      Logger.log('Error: OPENAI_API_KEY not found or invalid format in Script Properties');
+      return { summary: 'サマリー生成エラー: API キー未設定', sources: [], metrics: '' };
+    }
+    
+    // Flatten all articles for fact extraction
+    var allArticles = [];
+    var allSources = [];
+    
+    for (var i = 0; i < clusters.length; i++) {
+      var cluster = clusters[i];
+      for (var j = 0; j < cluster.length; j++) {
+        allArticles.push(cluster[j]);
+        if (cluster[j].url && allSources.indexOf(cluster[j].url) === -1) {
+          allSources.push(cluster[j].url);
+        }
+      }
+    }
+    
+    // Extract facts and KPIs from all articles
+    Logger.log('Extracting facts from ' + allArticles.length + ' articles');
+    var facts = extractFacts(allArticles);
+    
+    // Stage 1: Map - Structure each cluster into JSON
+    Logger.log('Stage 1: Map phase - structuring ' + clusters.length + ' clusters');
+    var structuredClusters = [];
+    
+    for (var k = 0; k < clusters.length; k++) {
+      var structuredCluster = mapToStructureWithOverview(clusters[k], companyOverview, openAiKey);
+      if (structuredCluster && structuredCluster.title) {
+        structuredClusters.push(structuredCluster);
+        Logger.log('Mapped cluster ' + (k + 1) + ': ' + structuredCluster.title);
+      }
+    }
+    
+    // Stage 2: Reduce - Aggregate KPIs and merge insights
+    Logger.log('Stage 2: Reduce phase - aggregating insights');
+    var aggregatedInsights = aggregateKPIs(structuredClusters, facts);
+    
+    // Stage 3: Narrative - Generate final 3-sentence summary with company context
+    Logger.log('Stage 3: Narrative generation with company overview and KPIs');
+    var narrativeResult = generateNarrativeWithOverviewAndRetry(aggregatedInsights, companyOverview, openAiKey, 3);
+    
+    // Remove company name prefix from summary (as specified in YAML)
+    var cleanSummary = removeCompanyNamePrefix(narrativeResult.summary, symbol.name);
+    
+    // Format metrics as CSV
+    var metricsCSV = formatMetricsAsCSV(facts);
+    
+    // Limit sources to top 3
+    var topSources = allSources.slice(0, 3);
+    
+    Logger.log('3-stage summary with overview completed: ' + cleanSummary.length + ' chars, ' + metricsCSV.length + ' metrics');
+    
+    return {
+      summary: cleanSummary,
+      sources: topSources,
+      metrics: metricsCSV
+    };
+    
+  } catch (error) {
+    Logger.log('Error in summarizeClustersWithOverview(): ' + error.toString());
+    return { summary: 'サマリー生成エラー', sources: [], metrics: '' };
+  }
+}
+
+/**
+ * Generate enhanced summary using 3-stage Map-Reduce-Narrative approach with KPIs (legacy function)
  * @param {Array} clusters - Array of article clusters
  * @return {Object} Summary object with narrative, metrics CSV, and sources
  */
@@ -203,7 +284,92 @@ function summarizeClusters(clusters) {
 }
 
 /**
- * Stage 1: Map cluster to structured JSON format
+ * Stage 1: Map cluster to structured JSON format with company overview
+ * @param {Array} cluster - Single cluster of articles
+ * @param {string} companyOverview - Company overview text
+ * @param {string} openAiKey - OpenAI API key
+ * @return {Object} Structured cluster data
+ */
+function mapToStructureWithOverview(cluster, companyOverview, openAiKey) {
+  try {
+    if (!cluster || cluster.length === 0) {
+      return null;
+    }
+    
+    // Prepare cluster text
+    var clusterText = '';
+    for (var i = 0; i < cluster.length; i++) {
+      var article = cluster[i];
+      clusterText += 'Title: ' + (article.title || '') + '\nContent: ' + (article.content || '') + '\n\n';
+    }
+    
+    // Limit text length for API efficiency
+    if (clusterText.length > 2000) {
+      clusterText = clusterText.substring(0, 2000);
+    }
+    
+    // Prepare context with company overview
+    var contextText = companyOverview ? '会社概要: ' + companyOverview + '\n\n' : '';
+    
+    var url = 'https://api.openai.com/v1/chat/completions';
+    
+    var messages = [
+      {
+        role: 'system',
+        content: 'ニュースクラスターを会社概要を踏まえて構造化JSONに変換してください。出力形式：{"title":"要因名","kpi":"数値指標","driver":"主要要因","outlook":"将来見通し"}'
+      },
+      {
+        role: 'user',
+        content: contextText + '以下のニュースクラスターを構造化JSONに変換してください：\n\n' + clusterText
+      }
+    ];
+    
+    var payload = {
+      model: 'gpt-4o-mini',
+      messages: messages,
+      temperature: 0.1,
+      max_tokens: 200
+    };
+    
+    var options = {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + openAiKey,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(payload)
+    };
+    
+    var response = UrlFetchApp.fetch(url, options);
+    
+    if (response.getResponseCode() !== 200) {
+      throw new Error('OpenAI API returned status: ' + response.getResponseCode());
+    }
+    
+    var data = JSON.parse(response.getContentText());
+    var jsonText = data.choices[0].message.content || '';
+    
+    // Try to parse the JSON response
+    try {
+      return JSON.parse(jsonText);
+    } catch (parseError) {
+      Logger.log('Failed to parse structured response: ' + jsonText);
+      return {
+        title: '情報不足',
+        kpi: '',
+        driver: '詳細情報の不足により要因特定困難',
+        outlook: ''
+      };
+    }
+    
+  } catch (error) {
+    Logger.log('Error in mapToStructureWithOverview(): ' + error.toString());
+    return null;
+  }
+}
+
+/**
+ * Stage 1: Map cluster to structured JSON format (legacy function)
  * @param {Array} cluster - Single cluster of articles
  * @param {string} openAiKey - OpenAI API key
  * @return {Object} Structured cluster data
@@ -364,7 +530,109 @@ function aggregateKPIs(structuredClusters, facts) {
 }
 
 /**
- * Stage 3: Generate narrative with retry logic
+ * Stage 3: Generate narrative with company overview and retry logic
+ * @param {Object} insights - Aggregated insights
+ * @param {string} companyOverview - Company overview text
+ * @param {string} openAiKey - OpenAI API key
+ * @param {number} maxRetries - Maximum retry attempts
+ * @return {Object} Final narrative result
+ */
+function generateNarrativeWithOverviewAndRetry(insights, companyOverview, openAiKey, maxRetries) {
+  for (var attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      var result = generateNarrativeWithOverview(insights, companyOverview, openAiKey);
+      
+      // Validate format (3 sentences, ≤400 chars)
+      if (validateNarrativeFormat(result.summary)) {
+        Logger.log('Narrative with overview generated successfully on attempt ' + attempt);
+        return result;
+      } else {
+        Logger.log('Format validation failed on attempt ' + attempt + ', retrying...');
+      }
+      
+    } catch (error) {
+      Logger.log('Error generating narrative with overview on attempt ' + attempt + ': ' + error.toString());
+    }
+  }
+  
+  // Fallback if all attempts fail
+  return {
+    summary: '株価変動要因の詳細分析が困難。複数の要因が複合的に影響している可能性。今後の業績発表や市場動向に注目が必要。',
+    validated: false
+  };
+}
+
+/**
+ * Generate narrative summary with company overview integration
+ * @param {Object} insights - Aggregated insights
+ * @param {string} companyOverview - Company overview text
+ * @param {string} openAiKey - OpenAI API key
+ * @return {Object} Narrative result
+ */
+function generateNarrativeWithOverview(insights, companyOverview, openAiKey) {
+  try {
+    var metricsText = insights.keyMetrics.length > 0 ? insights.keyMetrics.join('、') : '数値情報なし';
+    var driversText = insights.primaryDrivers.slice(0, 2).join('、');
+    var outlookText = insights.outlookStatements.length > 0 ? insights.outlookStatements[0] : '将来見通し未詳';
+    var contextText = insights.industryContext;
+    var overviewText = companyOverview || '会社概要情報なし';
+    
+    var url = 'https://api.openai.com/v1/chat/completions';
+    
+    var messages = [
+      {
+        role: 'system',
+        content: '株価分析の3文要約を作成してください。会社概要を踏まえ、第1文：具体的数値を含む事実、第2文：将来見通し、第3文：業界背景説明。必ず400文字以内、会社名で始めないでください。'
+      },
+      {
+        role: 'user',
+        content: '会社概要：' + overviewText + '\n数値指標：' + metricsText + '\n要因：' + driversText + '\n見通し：' + outlookText + '\n業界背景：' + contextText + '\n\n上記情報から3文400文字以内で要約してください。会社名は冒頭に入れないでください。'
+      }
+    ];
+    
+    var payload = {
+      model: 'gpt-4o-mini',
+      messages: messages,
+      temperature: 0.2,
+      max_tokens: 200
+    };
+    
+    var options = {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + openAiKey,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(payload)
+    };
+    
+    var response = UrlFetchApp.fetch(url, options);
+    
+    if (response.getResponseCode() !== 200) {
+      throw new Error('OpenAI API returned status: ' + response.getResponseCode());
+    }
+    
+    var data = JSON.parse(response.getContentText());
+    var summary = data.choices[0].message.content || '';
+    
+    // Ensure 400 character limit
+    if (summary.length > 400) {
+      summary = summary.substring(0, 397) + '...';
+    }
+    
+    return {
+      summary: summary,
+      validated: true
+    };
+    
+  } catch (error) {
+    Logger.log('Error in generateNarrativeWithOverview(): ' + error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Stage 3: Generate narrative with retry logic (legacy function)
  * @param {Object} insights - Aggregated insights
  * @param {string} openAiKey - OpenAI API key
  * @param {number} maxRetries - Maximum retry attempts
@@ -476,6 +744,43 @@ function validateNarrativeFormat(narrative) {
   if (sentences.length < 2 || sentences.length > 3) return false;
   
   return true;
+}
+
+/**
+ * Remove company name prefix from summary text (as specified in YAML)
+ * @param {string} summary - Generated summary text
+ * @param {string} companyName - Company name to remove
+ * @return {string} Clean summary without company name prefix
+ */
+function removeCompanyNamePrefix(summary, companyName) {
+  if (!summary || !companyName) {
+    return summary || '';
+  }
+  
+  try {
+    // Remove pattern: "会社名：" or "会社名:" from beginning
+    var cleanSummary = summary.replace(/^.+?[：:]\s*/, '');
+    
+    // If nothing was removed, try removing just the company name from beginning
+    if (cleanSummary === summary && summary.indexOf(companyName) === 0) {
+      cleanSummary = summary.substring(companyName.length).replace(/^[：:\s]+/, '');
+    }
+    
+    // Ensure the summary starts with a capital letter or Japanese character
+    if (cleanSummary.length > 0) {
+      var firstChar = cleanSummary.charAt(0);
+      if (firstChar.toLowerCase() === firstChar && /[a-z]/.test(firstChar)) {
+        cleanSummary = firstChar.toUpperCase() + cleanSummary.substring(1);
+      }
+    }
+    
+    Logger.log('Cleaned summary prefix: "' + summary.substring(0, 30) + '..." -> "' + cleanSummary.substring(0, 30) + '..."');
+    return cleanSummary;
+    
+  } catch (error) {
+    Logger.log('Error removing company name prefix: ' + error.toString());
+    return summary;
+  }
 }
 
 /**

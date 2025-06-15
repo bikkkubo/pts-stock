@@ -1,0 +1,46 @@
+project: pts-stock
+generated_at: '2025-06-15 16:27:06'
+objectives:
+- Remove company name from beginning of AI summary (column F).
+- Insert company overview fetched from Kabutan (会社情報 > 概要) into the summary prompt.
+- Align fetched PTS ranking with on‑screen Kabutan ranking (mode=1 / mode=2) to fix
+  order mismatch.
+changes:
+  overview_integration:
+    description: Fetch company overview and embed into LLM prompt.
+    new_function: getCompanyOverview(code)
+    fetch_url: https://kabutan.jp/stock/?code={code}
+    regex: <th>概要</th> ... <td>(.*?)</td>
+    call_flow:
+    - overview = getCompanyOverview(code)
+    - pass overview into summarizeSymbol(overview, articles, symbol)
+    prompt_prefix: '会社概要: {overview}'
+    output_postprocess: 'summary.replace(/^.+?：/, '''')  # remove name prefix'
+  ranking_alignment:
+    issue: Current scraping default sort differs from visible ranking.
+    solution:
+    - Use ptstops?mode=1 for gainers, ?mode=2 for losers
+    - Parse ptsPrice & normalClose, compute diff & diffPct
+    - Handle midnight execution by subtracting one day if needed
+  code_modifications:
+    fetchers.gs:
+    - Add getCompanyOverview()
+    - Revise fetchPts() to iterate modes and compute diff
+    Code.gs:
+    - Pass overview to summarizeSymbol()
+    nlp.gs:
+    - preparePrompt() now accepts overview
+    - Strip company name from generated summary
+  sheet_impact: Column structure unchanged; column F content reformatted.
+  tests:
+  - overview_fetch.test.gs – ensure regex captures overview
+  - ranking_order.test.gs – verify symbol list matches Kabutan page order
+deployment_steps:
+- Create branch feature/overview_summary
+- Implement and `clasp push`
+- Run manual test, validate summary & ranking
+- Merge and enable trigger
+optional_enhancements:
+- Extract '特色' section for richer context.
+- Fallback to EDINET '事業の概況' when overview missing.
+- Provide PTS vs normal volume ratio to LLM for demand commentary.

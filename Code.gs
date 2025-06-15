@@ -67,10 +67,13 @@ function main() {
         }
         
         if (hasMeaningfulNews) {
-          // Try enhanced OpenAI API with KPI extraction
+          // Fetch company overview for enhanced context
+          var companyOverview = getCompanyOverview(symbol.code);
+          
+          // Try enhanced OpenAI API with KPI extraction and company overview
           try {
             var clusters = clusterArticles(newsArticles);
-            var summaryResult = summarizeClusters(clusters);
+            var summaryResult = summarizeClustersWithOverview(clusters, companyOverview, symbol);
             if (summaryResult && summaryResult.summary && summaryResult.summary.indexOf('エラー') < 0) {
               summary = summaryResult.summary;
               sources = summaryResult.sources || [];
