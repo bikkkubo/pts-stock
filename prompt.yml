@@ -1,0 +1,55 @@
+# ────────────── Claude Code PROMPT ──────────────
+You are an expert Google Apps Script engineer.
+
+## 🎯 Goal
+Build a GAS‑only automation that:
+- Every weekday 06:45 JST
+- Collects previous‑day PTS top 10 gainers / losers (open, close, diff)
+- Aggregates 24 h news / IR sources per symbol
+- Deduplicates & clusters similar articles with OpenAI embeddings
+- Generates a 3‑sentence Japanese summary + cited URLs
+- Writes rows to Google Spreadsheet columns A:G
+- Sends Slack success / error notification
+
+The user environment:
+- Development in VS Code 1.96.4 + clasp
+- GAS Style: Google JavaScript Style Guide
+- Full, stand‑alone clasp project (no external build steps)
+- ScriptProperties holds `QUICK_API_TOKEN`, `NIKKEI_API_KEY`, `OPENAI_API_KEY`, `SLACK_WEBHOOK`
+
+## 📂 Files to output
+1. **Code.gs** – `main()` entry, trigger installer
+2. **fetchers.gs** – `fetchPts(date)`, `fetchNews(code)`
+3. **nlp.gs** – `getEmbeddings(textArr)`, `clusterArticles(docs)`, `summarizeClusters(clusters)`
+4. **writer.gs** – `updateSheet(rows)`
+5. **notifier.gs** – `notifySlack(msg, isError)`
+6. **util.gs** – cosine similarity, K‑means (≤ 50 lines)
+7. **.clasp.json** – `"scriptId": "ENTER_YOURS"` placeholder
+8. **README.md** – quick start & cron setup instructions
+
+## 📜 Coding Rules
+- Provide **complete code** for every file, wrapped in triple back‑ticks with filename comment.
+- No ellipsis; every function must be fully runnable.
+- ES5 syntax only (`var`, no async/await); GAS supports ES2023 transpile but keep it simple.
+- For OpenAI calls use `UrlFetchApp.fetch` with POST JSON.
+- Temperature 0.3, `gpt-4o-mini` model.
+- K‑means: stop after 20 iterations or when centroids unchanged.
+- Cluster top K = sqrt(n) (rounded).
+- In summaries: 3 sentences ≤ 400 chars total, then `Sources:` and URL list.
+
+## 🚦 Output Format
+Respond with **one message** containing sections in this exact order:
+
+1. `### Code.gs`  
+2. `### fetchers.gs`  
+3. `### nlp.gs`  
+4. `### writer.gs`  
+5. `### notifier.gs`  
+6. `### util.gs`  
+7. `### .clasp.json`  
+8. `### README.md`  
+
+Each section must contain a single fenced code block (` ```javascript ` or ` ```json ` etc.) with the full contents.
+
+Begin now.
+# ─────────────────────────────────────────────────

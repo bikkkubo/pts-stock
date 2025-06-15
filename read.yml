@@ -1,0 +1,84 @@
+# PTS Daily Report – GAS Edition
+
+## Overview
+This project creates an **end‑to‑end, server‑less** workflow that:
+1. Runs at 06:45 JST on Weekdays (Time‑Based Trigger)  
+2. Pulls previous‑day PTS top 10 **gainers & losers** (`open`, `close`, `diff`) via QUICK API  
+3. Fetches 24 h news / IR releases for each symbol (Nikkei, Reuters, TDnet RSS)  
+4. **Deduplicates** articles, **clusters** them with OpenAI embeddings, and produces a 3‑sentence JP summary + cited URLs  
+5. Writes results into Google Spreadsheet **A:G** (see sheet name in `writer.gs`)  
+6. Sends a Slack Webhook notification on success / failure  
+
+All logic is contained in **Google Apps Script** files, deployable with `clasp`.
+
+---
+
+## Environment  
+| Tool | Version / Note |
+|------|----------------|
+| VS Code | 1.96.4 |
+| clasp  | `npm i -g @google/clasp` |
+| GAS Runtime | V8 |
+| OpenAI Model | `gpt-4o-mini` / temperature 0.3 |
+
+Script Properties to set (⚙️ **Project Settings » Script Properties**):  
+- `QUICK_API_TOKEN` – PTS price API  
+- `NIKKEI_API_KEY` – News API  
+- `OPENAI_API_KEY`  
+- `SLACK_WEBHOOK` – Incoming Webhook URL  
+
+---
+
+## File Structure
+/pts-YYYYMMDD
+├─ Code.gs // main, trigger
+├─ fetchers.gs // price + news
+├─ nlp.gs // embeddings, clustering, GPT summary
+├─ writer.gs // Sheet I/O
+├─ notifier.gs // Slack helper
+├─ util.gs // small math helpers
+└─ .clasp.json // <-- insert your scriptId
+
+---
+
+## Implementation Requirements (for LLM)
+1. **Complete code** in each file – no placeholders except API keys.  
+2. ES5‑compatible syntax (`var`, avoid `const`/`let` if unsure).  
+3. K‑means clustering: `k = Math.round(Math.sqrt(n))`; stop after 20 epochs or earlier if centroids unchanged.  
+4. Summary output format:  機能発表したIR資料で公開された○○関連事業の好調を受け業績上方修正期待が高まり買い優勢。
+Sources:https://kabutan.jp/
+https://www.nikkei.com/
+5. Functions must be **pure & testable**, max 80 LOC each where possible.  
+6. Add `installTriggers()` that programmatically sets the weekday‑06:45 trigger.  
+
+---
+
+## Quick Start
+```bash
+# 1. Clone & auth
+git clone https://github.com/bikkkubo/pts-20250614.git
+cd pts-20250614
+clasp login
+
+# 2. Create GAS project
+clasp create --title "PTS Daily Report"
+
+# 3. Insert your scriptId into .clasp.json
+# 4. Push code
+clasp push
+
+# 5. Set Script Properties (UI or clasp secrets)
+# 6. Run installTriggers() once
+
+License
+MIT (modify as needed)
+
+---
+
+### ⭐ これでできること  
+- **プロンプト版**は「一問一答」で即ファイル生成。  
+- **README 版**はコード補完 AI が継続的に参照しやすいドキュメントとして機能します。
+
+どちらを採用するかは運用フローに合わせて選択してください。  
+不足・修正点があればお知らせいただければ追記いたします。
+

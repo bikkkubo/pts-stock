@@ -1,0 +1,59 @@
+project: pts-stock
+generated_at: 2025-06-16 00:29:53 UTC+09:00+0900
+issues:
+- id: placeholder_summaries
+  symptom: 要因要約がテンプレ化（『○○市場の回復期待…』）
+  cause: 本文が取得できず no-news テンプレート分岐が発火
+  impact: レポートの情報価値が皆無になる
+  remedy:
+  - Kabutan で本文要素（td.news_text 等）を取得し全文を LLM へ渡す
+  - TDnet RSS / IRBank から開示全文を追加
+  - 記事数==0 のときのみ no-news テンプレート使用
+- id: ir_dns_error
+  symptom: 会社 IR URL 取得で DNS error
+  cause: https://ir.company-<code>.co.jp という汎用 URL を生成している
+  remedy:
+  - パターン生成を廃止し、TDnet/IRBank API で IR を取得
+- id: missing_nikkei_api_key
+  symptom: NIKKEI_API_KEY not found, skipping enhanced news
+  impact: 高品質ニュースを取り込み損ねる
+  remedy:
+  - Nikkei NewsFlash API キーを ScriptProperties に登録
+  - キーが無い場合は警告ログのみでジョブは継続
+- id: duplicate_symbols
+  symptom: 同一銘柄を2回以上処理 (例:3657)
+  cause: symbol list 一意化していない
+  remedy:
+  - Set オブジェクトで重複排除してからループ
+- id: limited_kabutan_fetch
+  symptom: Kabutan 取得が各銘柄3件で打ち止め、本文無し
+  cause: パーサが1ページ目のみ・見出しのみを取得
+  remedy:
+  - news_read.cgi?page=2… を自動で追跡
+  - 本文要素も抜き、重複見出しは URL ハッシュで排除
+improvements:
+  fetchers:
+  - Kabutan parser 拡張 (本文 + ページネーション)
+  - TDnet RSS / IRBank 追加
+  - 無効な会社 IR パターン URL 削除
+  nlp:
+  - Map–Reduce summarization に変更
+  - System prompt で3文400字 + Sources URL を厳守
+  - 'k-means: k=sqrt(n), 20epoch stop'
+  main_flow:
+  - シンボルを Set で一意化
+  - ソース不足時は warning ログを残し処理継続
+  tests:
+  - article_dedupe.test.gs (重複排除ユニットテスト)
+  - summary_format.test.gs (400字 + URL フォーマット)
+todo:
+  high:
+  - Nikkei API Key を環境に設定
+  - fetchers.gs を改修して TDnet/Kabutan 本文取得を実装
+  - summarizer prompt を Map–Reduce 方式に書き換え
+  medium:
+  - シンボル重複排除の導入
+  - ログレベル統一&警告追加
+  low:
+  - README にキー設定手順と失敗例 Q&A を追記
+  - 単体テスト用スケルトンを追加
