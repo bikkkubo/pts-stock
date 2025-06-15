@@ -1,0 +1,16 @@
+# Logs
+*.log
+
+# API Keys and Secrets  
+.env
+.clasp.json
+
+# OS generated files
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
