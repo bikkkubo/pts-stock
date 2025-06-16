@@ -20,7 +20,7 @@ function fetchNightPts(type){
       rows=[];
   (html.match(rowRe)||[]).forEach(function(r){
      var c=(r.match(cellRe)||[]).map(function(x){return x.replace(tag,'').trim();});
-     if(c.length<7||!/^\d{3,4}$/.test(c[0])) return;
+     if(c.length<7||!/^\d{3,4}[A-Z]?$/.test(c[0])) return;
      var prev=Number(c[5].replace(/,/g,'')),
          close=Number(c[4].replace(/,/g,''));
      rows.push({
@@ -37,7 +37,20 @@ function fetchNightPts(type){
 
 /** entry for main() */
 function fetchPts(){
-  return fetchNightPts('increase').concat(fetchNightPts('decrease'));
+  var gainers = fetchNightPts('increase');
+  var decliners = fetchNightPts('decrease');
+  
+  Logger.log('Gainers count: ' + gainers.length);
+  Logger.log('Decliners count: ' + decliners.length);
+  
+  if (gainers.length > 0) {
+    Logger.log('First gainer: ' + gainers[0].code + ' (' + gainers[0].name + ') ' + gainers[0].diffPercent + '%');
+  }
+  if (decliners.length > 0) {
+    Logger.log('First decliner: ' + decliners[0].code + ' (' + decliners[0].name + ') ' + decliners[0].diffPercent + '%');
+  }
+  
+  return gainers.concat(decliners);
 }
 
 /**

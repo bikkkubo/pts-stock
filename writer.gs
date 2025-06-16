@@ -41,7 +41,7 @@ function updateSheet(allRows) {
           (row.diffPercent || 0) + '%',            // F: 騰落率(%)
           row.summary || '',                       // G: AI要約
           row.metrics || '',                       // H: メトリクス
-          (row.sources || []).join('\n')           // I: 情報源
+          (row.sources || []).slice(0, 3).join('\n')  // I: 情報源 (最大3つ)
         ];
       });
       
