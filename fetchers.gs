@@ -21,7 +21,7 @@ function fetchNightPts(type){
     var diff = close-open;
     data.push({
       code : c[0],
-      name : c[1],
+      name : c[1].replace(/^東[ＳＧＰＮ]/, ''), // Remove exchange prefix
       open : open,
       close: close,
       diff : diff,
