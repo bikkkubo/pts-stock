@@ -126,7 +126,7 @@ function main() {
         open: symbol.open,
         close: symbol.close,
         diff: symbol.diff,
-        diffPercent: symbol.diffPercent,
+        pct: symbol.pct,
         summary: summary,
         metrics: metrics,
         sources: sources
@@ -143,7 +143,7 @@ function main() {
           open: symbol.open,
           close: symbol.close,
           diff: symbol.diff,
-          diffPercent: symbol.diffPercent,
+          pct: symbol.pct,
           summary: '処理エラー: ' + symbolError.toString(),
           metrics: '',
           sources: ['https://kabutan.jp/stock/?code=' + symbol.code]
@@ -235,7 +235,7 @@ function removeTriggers() {
  * @return {string} Manus-style summary
  */
 function generateSimpleSummary(symbol, articles) {
-  var change = symbol.diffPercent || 0;
+  var change = symbol.pct || 0;
   var absChange = Math.abs(change);
   var isPositive = change > 0;
   
@@ -381,7 +381,7 @@ function generateSimpleSummary(symbol, articles) {
  * @return {string} Enhanced summary text
  */
 function generateEnhancedSummary(symbol, articles) {
-  var change = symbol.diffPercent || 0;
+  var change = symbol.pct || 0;
   var absChange = Math.abs(change);
   var isPositive = change > 0;
   

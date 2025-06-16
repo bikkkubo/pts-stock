@@ -38,7 +38,7 @@ function updateSheet(allRows) {
           row.open || 0,                           // C: 始値 (previous close)
           row.close || 0,                          // D: 終値 (PTS price)
           row.diff || 0,                           // E: 差額
-          (row.diffPercent || 0) + '%',            // F: 騰落率(%)
+          (row.pct || 0) + '%',                    // F: 騰落率(%)
           row.summary || '',                       // G: AI要約
           row.metrics || '',                       // H: メトリクス
           (row.sources || []).slice(0, 3).join('\n')  // I: 情報源 (最大3つ)
