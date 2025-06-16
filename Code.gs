@@ -7,14 +7,19 @@ function main() {
   try {
     Logger.log('Starting PTS Daily Report generation...');
     
+    // Check Nikkei API key availability (one-time warning)
+    if (!PropertiesService.getScriptProperties().getProperty('NIKKEI_API_KEY')) {
+      Logger.log('[WARN] NIKKEI_API_KEY not set – skipping Nikkei news enrichment.');
+    }
+    
     // Get current date (PTS shows current/next day data)
     var today = new Date();
     var dateStr = Utilities.formatDate(today, 'Asia/Tokyo', 'yyyy-MM-dd');
     
     Logger.log('Processing data for date: ' + dateStr);
     
-    // Fetch PTS data using safe wrapper with 403 error handling
-    var ptsData = safeFetchPts(dateStr);
+    // Fetch PTS data using night ranking method
+    var ptsData = fetchPts(); // 夜間ランキング取得
     if (!ptsData || ptsData.length === 0) {
       throw new Error('No PTS data retrieved for ' + dateStr);
     }

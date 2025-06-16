@@ -1,46 +1,111 @@
-project: pts-stock
-generated_at: '2025-06-15 17:23:28'
-objective: Fix ranking mismatch by scraping Kabutan night PTS ranking pages with proper
-  endpoint.
-methods:
-  A_direct_html:
-    description: Parse night gainers/decliners HTML with cheerio in GAS.
-    urls:
-    - https://kabutan.jp/warning/pts_night_price_increase
-    - https://kabutan.jp/warning/pts_night_price_decrease
-    code_fetchNightPts: "function fetchNightPts(type){      // type = 'increase' |\
-      \ 'decrease'\n  const url = `https://kabutan.jp/warning/pts_night_price_${type}`;\n\
-      \  const options = {\n    headers: {'User-Agent':'Mozilla/5.0'},\n    muteHttpExceptions:\
-      \ true\n  };\n  const html = UrlFetchApp.fetch(url, options)\n             \
-      \              .getContentText('utf-8');\n  const $ = Cheerio.load(html);  \
-      \  // cheerio packaged via clasp\n  var rows = [];\n  $('table.stock_table tbody\
-      \ tr').each(function(){\n    const tds  = $(this).find('td');\n    const code\
-      \ = tds.eq(0).text().trim();\n    const name = tds.eq(1).text().trim();\n  \
-      \  const pts  = parseFloat(tds.eq(4).text().replace(/,/g,''));\n    const prev\
-      \ = parseFloat(tds.eq(5).text().replace(/,/g,''));\n    const rate = parseFloat(tds.eq(6).text()\n\
-      \                               .replace(/[+%]/g,''))/100;\n    rows.push({code:code,\n\
-      \               name:name,\n               ptsPrice:pts,\n               prevClose:prev,\n\
-      \               changePct:rate});\n  });\n  return rows;\n}"
-    code_fetchPts: "// Replace existing fetchPts()\nfunction fetchPts(dateStr){\n\
-      \  const gainers   = fetchNightPts('increase');\n  const decliners = fetchNightPts('decrease');\n\
-      \  return gainers.concat(decliners);\n}"
-    retry_wrapper: "function safeFetchPts(){\n  try {\n    return fetchPts();\n  }\
-      \ catch(e){\n    if(String(e).indexOf('403') >= 0){\n      Logger.log('Night\
-      \ PTS blocked, fallback to QUICK');\n      return fetchPtsQuick();      // implement\
-      \ JSON API fallback\n    }\n    throw e;\n  }\n}"
-  B_quick_api: Use QUICK/JNX paid API e.g. /v1/pts/ranking?type=gainers to retrieve
-    JSON.
-  C_cloud_run_headless: Create Cloud Run microservice running Puppeteer+Stealth to
-    return HTML to GAS.
-  D_ocr:
-    flow:
-    - Screenshot page (pageres or chromium).
-    - Send to Vision API TEXT_DETECTION.
-    - Parse text lines into structured rows.
-    note: Lowest priority due to 80-85% accuracy and heavy post-processing.
-deployment_steps:
-- npm install cheerio, bundle with clasp or gas-bundler.
-- Add User-Agent header to UrlFetchApp to mitigate 403.
-- Replace fetchPts and add safeFetchPts wrapper.
-- Manual test run, verify ranking alignment with Kabutan UI.
-- If frequent 403, enable QUICK API or Cloud Run fallback.
+以下は 「ランキング不一致」 を解消するための 完全コード差し替え と
+周辺修正（IR URL 404／Nikkei API 未設定）を含む決定版パッチです。
+fetchers.gs を丸ごと置き換え、Code.gs に 3 行だけ追記する だけで動きます。
+（Cheerio を同梱できない場合は純正正規表現版も併記）
+
+⸻
+
+1. 変更の要点
+|現状|問題|修正後|
+|---|----|----|
+|/stock/ptstops をスクレイプ|昼間の通常比ランキング → 夜間とズレ|/warning/pts_night_price_increase & _decrease を直接取得|
+|UrlFetchApp デフォルト UA|Cloudflare に遮断されることがある|User‑Agent: Mozilla/5.0 を明示|
+|会社 IR URL をir.company‑<code>.co.jp に生成}99% 存在しない ➜ DNS Error|生成ロジックを削除（TDnet RSS で代替予定）|
+|Nikkei API キー無し|エラーは無いが情報不足|キー未設定なら一度だけ WARN ログ|
+
+2. 依存ライブラリ
+	•	Cheerio 1.0.0‑rc.12
+    npm i cheerio
+•	clasp で push する場合は gas-bundler または esbuild で 1ファイルにまとめてください。
+•	もし環境的に難しい場合は下の “正規表現版” を使ってください（依存ゼロ）。
+
+3. 差し替えコード
+
+3‑1. fetchers.gs（Cheerio 版）
+```
+/**  ===== fetchers.gs  =====  */
+/**
+ * 夜間PTS値上がり／値下がりランキングを取得
+ * @param {'increase'|'decrease'} type
+ * @return {Array.<{code:string,name:string,pts:number,prev:number,rate:number}>}
+ */
+function fetchNightPts(type) {
+  const url = `https://kabutan.jp/warning/pts_night_price_${type}`;
+  const opt = {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' },
+    muteHttpExceptions: true,
+  };
+  const html = UrlFetchApp.fetch(url, opt).getContentText('utf-8');
+
+  // —— Cheerio パース ——
+  const $ = Cheerio.load(html);
+  const rows = [];
+  $('table.stock_table tbody tr').each(function () {
+    const tds = $(this).find('td');
+    if (tds.length < 7) return; // ヘッダ行除外
+    rows.push({
+      code: tds.eq(0).text().trim(),
+      name: tds.eq(1).text().trim(),
+      pts: Number(tds.eq(4).text().replace(/,/g, '')),
+      prev: Number(tds.eq(5).text().replace(/,/g, '')),
+      rate: Number(tds.eq(6).text().replace(/[+%]/g, '')),
+    });
+  });
+  return rows;
+}
+
+/** PTS データ取得のエントリーポイント（呼び出し側はこれだけでOK） */
+function fetchPts() {
+  const gainers = fetchNightPts('increase'); // 値上げ率
+  const losers  = fetchNightPts('decrease'); // 値下げ率
+  return gainers.concat(losers);
+}
+```
+
+Cheerio が使えない場合 – 正規表現版
+```
+function fetchNightPts(type) {
+  const html = UrlFetchApp.fetch(
+    `https://kabutan.jp/warning/pts_night_price_${type}`,
+    { headers: { 'User-Agent': 'Mozilla/5.0' }, muteHttpExceptions: true }
+  ).getContentText('utf-8');
+
+  const rowRe = /<tr[^>]*?>[\s\S]*?<\/tr>/g;
+  const cellRe = /<td[^>]*?>([\s\S]*?)<\/td>/g;
+  const tagsRe = /<[^>]+>/g;
+
+  const rows = [];
+  (html.match(rowRe) || []).forEach(r => {
+    const cells = (r.match(cellRe) || []).map(c => c.replace(tagsRe, '').trim());
+    if (cells.length < 7 || !/^\d{3,4}$/.test(cells[0])) return;
+    rows.push({
+      code: cells[0],
+      name: cells[1],
+      pts:  Number(cells[4].replace(/,/g, '')),
+      prev: Number(cells[5].replace(/,/g, '')),
+      rate: Number(cells[6].replace(/[+%]/g, '')),
+    });
+  });
+  return rows;
+}
+```
+
+3‑2. Code.gs (追記 3 行)
+```
+// ✅ 既存 main() 内、PTS 取得行だけ差し替え
+- const ptsData = fetchPts(dateStr);           // 旧
++ const ptsData = fetchPts();                  // 夜間ランキング取得
+
+// ✅ 会社IR URL 生成ロジックをコメントアウト or 削除
+- var irUrls = [
+-   `https://ir.company-${code}.co.jp/news/`,
+-   `https://www.company-${code}.co.jp/ir/news/`
+- ];
++ var irUrls = []; // TDnet RSSで代替予定
+
+// ✅ Nikkei API キー警告（init() などで一度だけ）
+if (!ScriptProperties.getProperty('NIKKEI_API_KEY')) {
+  Logger.log('[WARN] NIKKEI_API_KEY not set – skipping Nikkei news enrichment.');
+}
+```
+
