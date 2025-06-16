@@ -30,6 +30,9 @@ function updateSheet(allRows) {
     sheet.getRange(2, 1, 1, headers.length).setValues([headers]);
     
     if (allRows && allRows.length > 0) {
+      Logger.log('DEBUG: Writing ' + allRows.length + ' rows to spreadsheet');
+      Logger.log('DEBUG: First row data: ' + JSON.stringify(allRows[0]));
+      
       // Map data to match A-I column structure
       var values = allRows.map(function(row) {
         return [
@@ -38,12 +41,15 @@ function updateSheet(allRows) {
           row.open || 0,                           // C: 始値 (previous close)
           row.close || 0,                          // D: 終値 (PTS price)
           row.diff || 0,                           // E: 差額
-          (row.pct || 0) + '%',                    // F: 騰落率(%)
+          row.pct || 0,                            // F: 騰落率(%)
           row.summary || '',                       // G: AI要約
           row.metrics || '',                       // H: メトリクス
           (row.sources || []).slice(0, 3).join('\n')  // I: 情報源 (最大3つ)
         ];
       });
+      
+      Logger.log('DEBUG: Mapped values length: ' + values.length);
+      Logger.log('DEBUG: First mapped row: ' + JSON.stringify(values[0]));
       
       // Write data to sheet
       sheet.getRange(3, 1, values.length, 9).setValues(values);
