@@ -119,35 +119,35 @@ function main() {
         sources.push('https://kabutan.jp/warning/pts_night_price_increase');
       }
       
-      // Prepare row data: A:H columns (updated with metrics)
-      var row = [
-        symbol.code,           // A: Symbol code
-        symbol.name || '',     // B: Stock name
-        symbol.open,           // C: Open price  
-        symbol.close,          // D: Close price
-        symbol.diff,           // E: Price difference
-        symbol.diffPercent,    // F: Percentage change
-        summary,               // G: AI-generated summary
-        metrics,               // H: MetricsCSV (NEW: KPI data)
-        sources.join('\n')     // I: Source URLs (moved to column I)
-      ];
+      // Prepare row data object for writer.gs
+      var row = {
+        code: symbol.code,
+        name: symbol.name || '',
+        open: symbol.open,
+        close: symbol.close,
+        diff: symbol.diff,
+        diffPercent: symbol.diffPercent,
+        summary: summary,
+        metrics: metrics,
+        sources: sources
+      };
       
       allRows.push(row);
       
       } catch (symbolError) {
         Logger.log('Error processing symbol ' + symbol.code + ': ' + symbolError.toString());
-        // Add row with error information (updated for 9 columns)
-        var errorRow = [
-          symbol.code,
-          symbol.name || '',
-          symbol.open,
-          symbol.close,
-          symbol.diff,
-          symbol.diffPercent,
-          '処理エラー: ' + symbolError.toString(),
-          '', // Empty metrics column
-          'https://kabutan.jp/stock/?code=' + symbol.code
-        ];
+        // Add row with error information
+        var errorRow = {
+          code: symbol.code,
+          name: symbol.name || '',
+          open: symbol.open,
+          close: symbol.close,
+          diff: symbol.diff,
+          diffPercent: symbol.diffPercent,
+          summary: '処理エラー: ' + symbolError.toString(),
+          metrics: '',
+          sources: ['https://kabutan.jp/stock/?code=' + symbol.code]
+        };
         allRows.push(errorRow);
       }
     }
